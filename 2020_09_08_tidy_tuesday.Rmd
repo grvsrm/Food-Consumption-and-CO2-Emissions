@@ -39,16 +39,88 @@ food_consumption_raw <- tt$food_consumption
 
 # Tidying data
 ```{r}
-food_consumption <- food_consumption_raw %>% 
+food_consumption_tidy <- food_consumption_raw %>% 
     pivot_longer(3:4, names_to = "feature", values_to = "value")
 ```
 
 ```{r}
-food_consumption %>% 
+food_consumption_tidy %>% 
     ggplot(aes(feature, value)) +
     geom_boxplot(size = 2, alpha = 0.5, color = "gray50") +
-    geom_jitter(aes(color = feature)) +
+    geom_jitter(aes(color = feature), alpha = 0.3) +
     scale_y_log10(breaks = c(1, 10, 100, 1000))
     
 ```
+
+# Mean CO2 emission across various food categories
+```{r}
+food_consumption %>% 
+    mutate(co2perfood = co2_emmission / consumption) %>% 
+    group_by(food_category) %>% 
+    summarise(Avg_CO2 = mean(co2perfood, na.rm = T)) %>% 
+    mutate(food_category = fct_reorder(food_category, Avg_CO2)) %>% 
+    ggplot(aes(Avg_CO2, food_category)) +
+    geom_col(aes(fill = food_category), show.legend = F)
+
+```
+
+
+```{r}
+food_consumption %>% 
+    ggplot(aes(consumption, co2_emmission)) +
+    geom_point() +
+    facet_wrap(~food_category)
+```
+
+```{r}
+food_consumption <- food_consumption %>% 
+    mutate(Animal_Category = if_else(food_category %in% c("Beef", "Pork", "Poultry", "Lamb & Goat", "Fish", "Eggs", "Milk - inc. cheese"), "Animal", "Non Animal"))
+```
+
+```{r}
+food_consumption %>% 
+    select(Animal_Category, consumption, co2_emmission) %>%
+    pivot_longer(2:3, names_to = "feature", values_to = "value") %>% 
+    ggplot(aes(Animal_Category, value)) +
+    geom_boxplot() +
+    scale_y_log10() +
+    facet_wrap(~feature)
+```
+
+# Lets run a t-test
+```{r}
+food_consumption %>% 
+    select(Animal_Category, consumption, co2_emmission) %>%
+    pivot_longer(2:3, names_to = "feature", values_to = "value") %>%
+    filter(feature == "consumption") %>% 
+    t.test(value~Animal_Category, data = .)
+    
+
+food_consumption %>% 
+    select(Animal_Category, consumption, co2_emmission) %>%
+    pivot_longer(2:3, names_to = "feature", values_to = "value") %>%
+    filter(feature == "co2_emmission") %>% 
+    t.test(value~Animal_Category, data = ., alternative = "greater")
+```
+
+# A more tidy approach
+```{r}
+food_consumption %>% 
+    select(Animal_Category, consumption, co2_emmission) %>%
+    pivot_longer(2:3, names_to = "feature", values_to = "value") %>%
+    nest(valdata = c("Animal_Category", "value")) %>% 
+    mutate(t_test = map(valdata,
+                        ~t.test(value~Animal_Category, data = ., alternative = "greater")),
+           results = map(t_test, tidy)) %>% 
+    unnest(results)
+    
+```
+
+
+
+
+
+
+
+
 
