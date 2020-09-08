@@ -1,0 +1,54 @@
+---
+title: "TidyTemplate"
+date: 2020-09-08
+output: html_output
+editor_options: 
+  chunk_output_type: console
+---
+
+# TidyTuesday
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE, warning = FALSE, message = FALSE,
+                      dpi = 180, fig.width = 8, fig.height = 5)
+
+library(tidyverse)
+library(tidytuesdayR)
+library(scales)
+theme_set(theme_light())
+```
+
+# Load the weekly Data
+
+Dowload the weekly data and make available in the `tt` object.
+
+```{r Load}
+
+tt <- tt_load("2020-02-18")
+tt
+```
+
+
+# Load the files
+
+```{r Readme, eval = interactive()}
+
+food_consumption_raw <- tt$food_consumption
+```
+
+# Tidying data
+```{r}
+food_consumption <- food_consumption_raw %>% 
+    pivot_longer(3:4, names_to = "feature", values_to = "value")
+```
+
+```{r}
+food_consumption %>% 
+    ggplot(aes(feature, value)) +
+    geom_boxplot(size = 2, alpha = 0.5, color = "gray50") +
+    geom_jitter(aes(color = feature)) +
+    scale_y_log10(breaks = c(1, 10, 100, 1000))
+    
+```
+
